@@ -1,9 +1,10 @@
+require('dotenv').config();
+
 const express = require('express');
-const axios = require('axios');
 const app = express(); 
 const cors = require("cors");
-app.use(cors({ origin: "http://localhost:3000", credentials: true, }))
-require('dotenv').config();
+app.use(cors({ origin: true, credentials: true, }))
+const axios = require('axios');
 const {setSecureCookie} = require("./services/index.js")
 const cookieParser = require('cookie-parser');
 const { verifyAccessToken } = require("./middleware/index.js")
@@ -12,10 +13,10 @@ const PORT = process.env.PORT || 4000;
 
 app.use(express.json());
 app.use(cookieParser()); 
-app.use((req, res, next) => {
-  res.setHeader("Cache-Control", "no-store");
-  next();
-});
+// app.use((req, res, next) => {
+//   res.setHeader("Cache-Control", "no-store");
+//   next();
+// });
 
 app.get('/', (req, res) => {
     res.send(`<h1>Welcome to OAuth API Server.</h1>`)
@@ -72,9 +73,9 @@ if (!accessToken) {
       secure: false,
       sameSite: "lax",
     });
-    setSecureCookie(res, accessToken);
+    // setSecureCookie(res, accessToken);
+    // console.log("FRONTEND_URL:", process.env.FRONTEND_URL);
     return await res.redirect(`${process.env.FRONTEND_URL}/v2/profile/github`);
-
   } catch (error) {
    console.error("FULL ERROR:", error);
    console.error("RESPONSE DATA:", error.response?.data);
@@ -86,39 +87,8 @@ if (!accessToken) {
  }
 });
 
-app.get('/auth/github/callback', async(req, res)=>{
-    const {code}= req.query
-    if(!code){
-        return res.status(400).send('Authorization code not provided.')
-    }
-    try {
-        const tokenResponse = await axios.post('https://github.com/login/oauth/access_token', {
-            client_id: process.env.GITHUB_CLIENT_ID,
-            client_secret: process.env.GITHUB_CLIENT_SECRET,
-            code,
-        },
-    {headers: {Accept: 'application/json'}}
-);
-const accessToken = tokenResponse.data.access_token;
-res.cookie("access_token", accessToken);
-// res.cookie("access_token", accessToken, {
-//   httpOnly: true,
-//   secure: false,
-//   sameSite: "lax",
-// });
-return res.redirect(`${process.env.FRONTEND_URL}/v1/profile/github`)
-    } catch (error) {
-  console.error("FULL ERROR:", error);
-  console.error("RESPONSE DATA:", error.response?.data);
-  console.error("MESSAGE:", error.message);
-
-  res.status(500).json({
-    error: error.response?.data || error.message,
-  });
-}
-})
-
-app.get('/user/profile/github', verifyAccessToken, async (req, res) => {
+app.get('/user/profile/github', async (req, res) => {
+  // verifyAccessToken,
   try {
     const token = req.cookies.access_token;
 
@@ -183,28 +153,28 @@ setSecureCookie(res, accessToken);
     }
 })
 
-// app.get('/user/profile/google', verifyAccessToken, async (req, res) => {
-//   try {
-//     const token = req.cookies.access_token;
+app.get('/user/profile/google', verifyAccessToken, async (req, res) => {
+  try {
+    const token = req.cookies.access_token;
 
-//     if (!token) {
-//       return res.status(401).send('Unauthorized');
-//     }
+    if (!token) {
+      return res.status(401).send('Unauthorized');
+    }
 
-//     const response = await axios.get(
-//       'https://www.googleapis.com/oauth2/v2/userinfo',
-//       {
-//         headers: {
-//           Authorization: `Bearer ${token}`,
-//         },
-//       }
-//     );
+    const response = await axios.get(
+      'https://www.googleapis.com/oauth2/v2/userinfo',
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
 
-//     res.json({ user: response.data });
-//   } catch (error) {
-//     res.status(500).send('Failed to fetch user');
-//   }
-// });
+    res.json({ user: response.data });
+  } catch (error) {
+    res.status(500).send('Failed to fetch user');
+  }
+});
 
 app.listen(PORT, ()=>{
     console.log(`Server is running on http://localhost:${PORT}`);    
