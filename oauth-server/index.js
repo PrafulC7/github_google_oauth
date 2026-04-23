@@ -3,7 +3,15 @@ require('dotenv').config();
 const express = require('express');
 const app = express(); 
 const cors = require("cors");
-app.use(cors({ origin: true, credentials: true, }))
+
+// CORS configuration
+app.use(cors({
+  origin: "http://localhost:3000",
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
+
 const axios = require('axios');
 const {setSecureCookie} = require("./services/index.js")
 const cookieParser = require('cookie-parser');
@@ -69,7 +77,7 @@ if (!accessToken) {
 }
 
     res.cookie("access_token", accessToken, {
-      httpOnly: true,
+      httpOnly: false,
       secure: false,
       sameSite: "lax",
     });
@@ -142,8 +150,8 @@ app.get('/auth/google/callback', async (req, res)=>{
 
     accessToken = tokenResponse.data.access_token;
     res.cookie("access_token", accessToken, {
-  httpOnly: true,
-  secure: false,       // true in production (HTTPS)
+  httpOnly: false,
+  secure: false,
   sameSite: "lax",
 });
 setSecureCookie(res, accessToken);
